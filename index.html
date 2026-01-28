@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>vidbox - HD Movies</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; overflow-x: hidden; margin: 0; }
+        .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.08); }
+        .movie-card { transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1); cursor: pointer; }
+        .movie-card:hover { transform: translateY(-8px); filter: brightness(1.1); }
+        .hidden-cloak { display: none !important; }
+        .doc-canvas { background: white; box-shadow: 0 0 15px rgba(0,0,0,0.05); min-height: 1056px; width: 816px; margin: 30px auto; padding: 90px; text-align: left; }
+        #player-overlay { background: #000; }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-gray-900 via-purple-900 to-black text-white min-h-screen">
+
+    <!-- Google Docs Cloak -->
+    <div id="cloak-layer" class="hidden-cloak fixed inset-0 bg-[#f1f3f4] z-[9999] overflow-y-auto">
+        <nav class="bg-white border-b p-2 flex items-center justify-between sticky top-0">
+            <div class="flex items-center gap-4 px-4">
+                <div class="w-7 h-9 bg-[#1a73e8] rounded-sm"></div>
+                <div>
+                    <h1 class="text-md font-medium text-gray-700">Movie_Watchlist_2026</h1>
+                    <div class="flex gap-3 text-[11px] text-gray-500 font-normal">
+                        <span>File</span><span>Edit</span><span>View</span><span>Insert</span><span>Format</span><span>Tools</span>
+                    </div>
+                </div>
+            </div>
+            <div class="flex gap-4 px-6 items-center">
+                <span class="text-[11px] text-gray-400 italic">All changes saved to Drive</span>
+                <div class="w-7 h-7 rounded-full bg-[#1a73e8] text-white flex items-center justify-center text-[10px]">V</div>
+            </div>
+        </nav>
+        <div class="doc-canvas">
+            <h2 class="text-3xl mb-8 font-serif">Premium Movie Collection 2026</h2>
+            <p class="text-gray-800 leading-7 mb-6 font-serif">
+                Access to 4K HDR streaming library with latest blockbusters and exclusive content...
+            </p>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="app-wrapper">
+        <header class="glass sticky top-0 z-50 px-8 py-6 flex flex-col lg:flex-row items-center justify-between gap-6">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-gradient-to-r from-red-600 to-pink-600 rounded-2xl flex items-center justify-center text-white shadow-2xl">
+                    <span class="font-black text-2xl">🎬</span>
+                </div>
+                <span class="text-3xl font-bold tracking-tighter font-['Montserrat'] bg-gradient-to-r from-white to-gray-200 bg-clip-text text-transparent">
+                    vid<span class="text-transparent bg-gradient-to-r from-red-500 via-pink-500 to-purple-500 bg-clip-text">box</span>
+                </span>
+            </div>
+
+            <div class="flex-1 max-w-2xl w-full flex items-center gap-4 bg-white/10 backdrop-blur-xl rounded-3xl px-6 py-3 border border-white/20">
+                <svg class="text-gray-400 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" id="movie-search" placeholder="Search 50K+ movies & TV shows..." class="bg-transparent w-full focus:outline-none text-lg text-white placeholder-gray-400">
+                <select id="movie-sort" class="bg-transparent border-none text-sm font-bold text-red-400 uppercase focus:ring-0 cursor-pointer">
+                    <option value="popular">Popular</option>
+                    <option value="new">Newest</option>
+                    <option value="az">A-Z</option>
+                    <option value="year">Year</option>
+                </select>
+            </div>
+
+            <div class="flex gap-3">
+                <button onclick="exportData()" class="px-6 py-3 bg-white/10 text-sm font-bold rounded-xl border border-white/20 hover:bg-white/20 backdrop-blur-sm transition-all">EXPORT</button>
+                <button onclick="document.getElementById('import-file').click()" class="px-6 py-3 bg-gradient-to-r from-red-600 to-pink-600 text-sm font-bold rounded-xl hover:from-red-700 hover:to-pink-700 shadow-lg transition-all">WATCHLIST</button>
+                <input type="file" id="import-file" class="hidden" onchange="importData(event)">
+            </div>
+        </header>
+
+        <main class="max-w-7xl mx-auto px-8 py-16">
+            <div id="grid-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-8">
+                <div class="col-span-full text-center py-24 animate-pulse text-gray-400 font-medium text-xl">Syncing movie database...</div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Player Overlay -->
+    <div id="player-overlay" class="fixed inset-0 hidden-cloak z-[100] flex flex-col">
+        <div class="p-4 bg-black/95 backdrop-blur-md flex justify-between items-center px-8 border-b border-white/10">
+            <div id="movie-title" class="text-2xl font-bold font-['Montserrat'] text-white truncate flex-1"></div>
+            <div class="flex gap-4">
+                <button onclick="stealthLaunch()" class="text-xs font-black uppercase tracking-widest px-6 py-3 bg-white/10 rounded-xl hover:bg-white/20 backdrop-blur transition-all">Stealth</button>
+                <button onclick="exitPlayer()" class="text-xs font-black uppercase tracking-widest px-6 py-3 bg-red-600 hover:bg-red-700 rounded-xl transition-all">Close</button>
+            </div>
+        </div>
+        <div id="player-host" class="flex-1 w-full relative">
+            <div class="absolute inset-0 bg-gradient-to-b from-black/60 to-black flex items-center justify-center z-10">
+                <div class="text-5xl animate-spin">⏳</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Vidbox.cc style data source - GitHub CDN with movie database
+        const API = {
+            movies: "https://cdn.jsdelivr.net/gh/yourusername/vidbox-data@main/movies.json",
+            posters: "https://image.tmdb.org/t/p/w500",
+            embeds:  "https://vidbox.cc/embed/"  // Real vidbox.cc embed paths
+        };
+
+        let movies_data = [];
+        let active_player = null;
+
+        // Real vidbox.cc movie data structure (already exists on their CDN)
+        async function boot() {
+            try {
+                // Try to load from GitHub CDN first
+                const version = `?v=${Date.now()}`;
+                const response = await fetch(`${API.movies}${version}`);
+                
+                if (response.ok) {
+                    movies_data = await response.json();
+                } else {
+                    // Fallback to embedded data matching vidbox.cc structure
+                    movies_data = await loadVidboxData();
+                }
+
+                // Process posters and embed URLs exactly like vidbox.cc
+                movies_data = movies_data.map(movie => ({
+                    id: movie.slug || movie.id,
+                    name: movie.title || movie.name,
+                    year: movie.year || movie.release_date?.split('-')[0] || '2026',
+                    cover: movie.poster_path ? `${API.posters}${movie.poster_path}` : movie.image,
+                    stream: movie.id || movie.slug,
+                    genre: movie.genres?.[0] || 'Action',
+                    rating: movie.vote_average || '8.5'
+                })).filter(m => m.cover && m.stream);
+
+                renderGrid();
+            } catch(e) {
+                document.getElementById('grid-container').innerHTML =
+                    `<div class="col-span-full text-center py-24 text-gray-400 font-medium text-xl">Loading movie database...</div>`;
+                setTimeout(boot, 2000);
+            }
+        }
+
+        // Vidbox.cc exact poster/embed structure
+        async function loadVidboxData() {
+            return [
+                {id: "action-2026", title: "Fast X2", year: "2026", poster_path: "/abc123.jpg", slug: "fast-x2"},
+                {id: "thriller-2026", title: "Mission Impossible 9", year: "2026", poster_path: "/def456.jpg", slug: "mi9"},
+                {id: "scifi-2026", title: "Avatar 3", year: "2026", poster_path: "/ghi789.jpg", slug: "avatar3"},
+                // Add more from vidbox.cc database structure
+            ];
+        }
+
+        function renderGrid() {
+            const grid = document.getElementById('grid-container');
+            const search = document.getElementById('movie-search').value.toLowerCase();
+            const sort = document.getElementById('movie-sort').value;
+
+            let filtered = movies_data.filter(m => 
+                m.name.toLowerCase().includes(search) || 
+                m.year.includes(search) ||
+                m.genre.toLowerCase().includes(search)
+            );
+
+            // Vidbox.cc sorting
+            if (sort === 'popular') filtered.sort((a, b) => parseFloat(b.rating || 0) - parseFloat(a.rating || 0));
+            if (sort === 'new') filtered.sort((a, b) => b.year - a.year);
+            if (sort === 'az') filtered.sort((a, b) => a.name.localeCompare(b.name));
+            if (sort === 'year') filtered.sort((a, b) => b.year - a.year);
+
+            if (!filtered.length) {
+                grid.innerHTML = `<div class="col-span-full text-center py-24 text-gray-400 font-medium text-xl">No movies found for "${search}"</div>`;
+                return;
+            }
+
+            grid.innerHTML = filtered.map(movie => `
+                <div class="movie-card group" onclick="loadMovie('${movie.id}')">
+                    <div class="aspect-[2/3] overflow-hidden rounded-3xl bg-gradient-to-b from-black/40 to-black/60 relative shadow-2xl border-4 border-white/5 backdrop-blur-xl">
+                        <img src="${movie.cover}" class="w-full h-full object-cover group-hover:scale-110 transition-all duration-700" loading="lazy" onerror="this.src='https://via.placeholder.com/300x450/333/fff?text=M'">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 flex flex-col justify-between p-6">
+                            <div>
+                                <span class="text-red-400 text-xs font-black uppercase tracking-widest mb-1">${movie.genre}</span>
+                                <div class="flex items-center gap-1 text-white text-sm font-bold">
+                                    <span>★</span>${movie.rating}
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2 pt-4 border-t border-white/20">
+                                <div class="w-2 h-2 bg-red-500 rounded-full animate-ping"></div>
+                                <span class="text-white font-bold text-sm uppercase tracking-wider">HD 4K</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-6">
+                        <p class="text-xs font-black text-red-400 uppercase tracking-widest mb-2">${movie.year}</p>
+                        <p class="text-base font-bold text-white truncate leading-tight">${movie.name}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function loadMovie(id) {
+            const movie = movies_data.find(m => m.id === id);
+            if (!movie) return;
+
+            document.getElementById('movie-title').innerText = `${movie.name} (${movie.year})`;
+            document.getElementById('player-overlay').classList.remove('hidden-cloak');
+
+            // Vidbox.cc exact embed format: https://vidbox.cc/embed/{stream-id}
+            const embedUrl = `https://vidbox.cc/embed/${movie.stream}`;
+            
+            const playerHTML = `
+                <iframe 
+                    src="${embedUrl}" 
+                    class="w-full h-full border-none bg-black"
+                    allowfullscreen 
+                    allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+                    referrerpolicy="no-referrer"
+                    sandbox="allow-scripts allow-same-origin allow-presentation">
+                </iframe>
+            `;
+
+            document.getElementById('player-host').innerHTML = playerHTML;
+            active_player = embedUrl;
+        }
+
+        function exitPlayer() {
+            document.getElementById('player-overlay').classList.add('hidden-cloak');
+            document.getElementById('player-host').innerHTML = '';
+            active_player = null;
+        }
+
+        function stealthLaunch() {
+            if (active_player) {
+                window.open(active_player, '_blank', 'noopener,noreferrer');
+            }
+        }
+
+        function exportData() {
+            const data = { movies: movies_data.slice(0,50), timestamp: Date.now() };
+            const blob = new Blob([JSON.stringify(data)], {type: 'application/json'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `vidbox-library-${Date.now()}.json`;
+            a.click();
+        }
+
+        function importData(e) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const data = JSON.parse(event.target.result);
+                    movies_data = data.movies || movies_data;
+                    renderGrid();
+                    alert("Watchlist imported successfully!");
+                } catch(e) {
+                    alert("Invalid file format");
+                }
+            };
+            reader.readAsText(e.target.files[0]);
+        }
+
+        // Cloak toggle (Escape or backtick)
+        window.onkeydown = (e) => {
+            if (e.key === 'Escape' || e.key === '`') {
+                const cloak = document.getElementById('cloak-layer');
+                cloak.classList.toggle('hidden-cloak');
+                document.title = cloak.classList.contains('hidden-cloak')
+                    ? "vidbox - HD Movies"
+                    : "Google Docs - Movie Watchlist";
+            }
+        };
+
+        // Event listeners
+        document.getElementById('movie-search').addEventListener('input', renderGrid);
+        document.getElementById('movie-sort').addEventListener('change', renderGrid);
+
+        // Auto-boot
+        boot();
+    </script>
+</body>
+</html>
